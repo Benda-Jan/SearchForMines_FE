@@ -1,0 +1,92 @@
+﻿@page "/game/{GameId:int?}"
+
+<PageTitle>Game detail</PageTitle>
+
+<div class="centered">
+
+    @if (_loading)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <h1>Detail hry</h1>
+        <hr style="height: 1px; background-color: black; opacity: 100%; margin-bottom:10px;" />
+        @for (var x = 0; x < 10; x++)
+        {
+            <div style="margin-bottom: 0px;">
+                @for (var y = 0; y < 10; y++)
+                {
+                    var localX = x;
+                    var localY = y;
+                    var gameField = _gameFields.Where(f => f.posX == localX && f.posY == localY).SingleOrDefault();
+                    @if (gameField is not null)
+                    {
+                        var color = Color.Secondary;
+                        if (gameField.Revield)
+                        {
+                            if (gameField.MinesAround == 0)
+                                color = Color.Success;
+                            else
+                                color = Color.Transparent;
+                        }
+                        <MudIconButton Style="margin-left: 5px; width: 20px; height: 20px;" Color="color" Variant="Variant.Outlined" OnClick="@(() => FieldClicked(localX, localY))">
+                            @{
+                                var symbol = "?";
+                                if (gameField is not null && gameField.Revield)
+                                    symbol = gameField.HasMine ? "X" : gameField.MinesAround.ToString();
+                                @symbol
+                            }
+                        </MudIconButton>
+                    }
+                }
+            </div>
+        }
+
+        <MudPopover Open="@_isOpen" Fixed="true" Class="px-4 pt-4">
+            <div class="d-flex flex-column">
+                <MudText>Našel jsi bombu, hra pro tebe končí.</MudText>
+                <MudButton OnClick="@ToggleOpen" Class="ml-auto mr-n3 mb-1" Color="Color.Error">Close</MudButton>
+            </div>
+        </MudPopover>
+    }
+
+</div>
+
+@code{
+    [Inject] private NavigationManager _navigationManager { get; set; } = null!;
+    [Inject] GameFieldClient _gameFieldClient { get; set; } = null!;
+    [Parameter] public int? GameId { get; set; }
+    private GameFieldDto[] _gameFields { get; set; } = Array.Empty<GameFieldDto>();
+    private bool _loading = true;
+    private bool _isOpen = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshFields();
+        _loading = false;
+    }
+
+    private async Task RefreshFields()
+    {
+        _gameFields = await _gameFieldClient.GetAll(GameId ?? 0) ?? Array.Empty<GameFieldDto>();
+    }
+
+    async Task FieldClicked(int x, int y)
+    {
+        var state = await _gameFieldClient.Selected(new GameFieldInputDto { GameId = (GameId ?? 0), PosX = x, PosY = y });
+        await RefreshFields();
+        if (state != "Active")
+        {
+            _isOpen = true;
+        }
+    }
+    private void ToggleOpen()
+    {
+        if (_isOpen)
+            _isOpen = false;
+        else
+            _isOpen = true;
+        _navigationManager.NavigateTo($"/");
+    }
+}

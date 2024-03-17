@@ -1,0 +1,90 @@
+﻿@page "/"
+
+<PageTitle>Games</PageTitle>
+
+<div class="centered">
+    <h1>Seznam her</h1>
+    <hr style="height: 1px; background-color: black; opacity: 100%; margin-bottom:10px;" />
+
+    @if (_games == null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <MudTable Items="@_games"
+                  Hover="true"
+                  Breakpoint="Breakpoint.Sm"
+                  Loading="@_loading"
+                  LoadingProgressColor="Color.Info">
+            <HeaderContent>
+                <MudTh>Název</MudTh>
+                <MudTh>Id</MudTh>
+                <MudTh>Počet min</MudTh>
+                <MudTh>Stav</MudTh>
+                <MudTh>Detail</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Název">@context.Name</MudTd>
+                <MudTd DataLabel="Id">@context.Id</MudTd>
+                <MudTd DataLabel="Počet min">@context.MinesCount</MudTd>
+                <MudTd DataLabel="Stav">@context.State</MudTd>
+                <MudTd DataLabel="Detail">
+                    @if (context.State == "Active")
+                    {
+                        <a href="game/@context.Id">
+                            Zobrazit
+                        </a>
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+
+        <MudChip Style="float: none;">
+            <MudIconButton Icon="@Icons.Material.Filled.Add"
+                           Color="@Color.Primary"
+                           OnClick="ShowAddNewGameDialog" />
+        </MudChip>
+
+    }
+
+</div>
+
+@code{
+    [Inject] private GameClient _gameClient { get; set; } = null!;
+    [Inject] private NavigationManager _navigationManager { get; set; } = null!;
+    [Inject] private IDialogService _dialogService { get; set; } = null!;
+    private GameDto[] _games = Array.Empty<GameDto>();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = false;
+        await RefreshGames();
+    }
+
+    private async Task RefreshGames()
+    {
+        _games = await _gameClient.FindAll() ?? Array.Empty<GameDto>();
+    }
+
+    private async Task ShowAddNewGameDialog()
+    {
+        var dialog = _dialogService.Show<NewGameDialog>("Vytvořit novou hru");
+
+        var result = await dialog.Result;
+
+        if (result.Canceled)
+            return;
+
+        var gameDto = (result.Data as GameInputDto);
+        if (gameDto is null)
+            return;
+
+        var gameId = await _gameClient.Create(gameDto);
+
+        await RefreshGames();
+
+        _navigationManager.NavigateTo($"/game/{gameId}");
+    }
+}

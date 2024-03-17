@@ -1,0 +1,47 @@
+﻿@using System.ComponentModel.DataAnnotations;
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @bind-IsValid="@_success" @bind-Errors="@_errors">
+            <MudTextField @bind-Value="@_toCreate.Name"
+                          T="string"
+                          Label="Jméno"
+                          Margin="Margin.Dense"
+                          Validation="new MaxLengthAttribute(50)"
+                          Required="true" />
+            <MudNumericField @bind-Value="@_toCreate.MinesCount"
+                          T="int"
+                          Label="Počet min"
+                          Margin="Margin.Dense"
+                          Validation="new RangeAttribute(1, 100)"
+                          Required="true" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Size="Size.Small">Zrušit</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="Submit"
+                   Size="Size.Small"
+                   Disabled="@(!_success)">Uložit</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance _mudDialog { get; set; } = null!;
+
+    private bool _success;
+    private string[] _errors = { };
+    public GameInputDto _toCreate = new();
+
+    private async Task Submit()
+    {
+        if (!_success)
+            return;
+
+        _mudDialog.Close(DialogResult.Ok(_toCreate));
+    }
+
+    private void Cancel()
+        => _mudDialog.Cancel();
+}
